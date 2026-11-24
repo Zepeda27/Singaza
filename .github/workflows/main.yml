@@ -22,7 +22,8 @@ jobs:
         run: xcodegen generate
       - name: Compilar
         working-directory: AZASing
-        run: xcodebuild -project AZASing.xcodeproj -scheme AZASing -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+        run: |
+          xcodebuild -project AZASing.xcodeproj -scheme AZASing -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build.log 2>&1 || { echo "=== ERRORES ==="; grep "error:" build.log | sort -u; exit 1; }
       - name: Crear IPA
         working-directory: AZASing
         run: |
@@ -33,3 +34,4 @@ jobs:
         with:
           name: AZASing-ipa
           path: AZASing/AZASing.ipa
+
