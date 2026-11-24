@@ -7,9 +7,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Descomprimir proyecto
         run: unzip -q AZASing.zip
-      - name: Corregir rama de Zsign
+      - name: Detectar producto de zsign-ios
         run: |
-          sed -i '' 's/branch: main/branch: master/' AZASing/project.yml
+          git clone --depth 1 https://github.com/zwsn/zsign-ios /tmp/zs
+          cat /tmp/zs/Package.swift
+          P=$(grep -m1 -A1 '\.library' /tmp/zs/Package.swift | grep -o 'name: *"[^"]*"' | head -1 | cut -d'"' -f2)
+          [ -n "$P" ] || P=ZSign
+          echo "Producto detectado: $P"
+          sed -i '' "s/product: ZSign/product: $P/" AZASing/project.yml
       - name: Instalar XcodeGen
         run: brew install xcodegen
       - name: Generar proyecto
@@ -28,6 +33,3 @@ jobs:
         with:
           name: AZASing-ipa
           path: AZASing/AZASing.ipa
-
-
-
