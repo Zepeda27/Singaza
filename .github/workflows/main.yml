@@ -1,1 +1,28 @@
+name: Build AZASing
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descomprimir proyecto
+        run: unzip -q AZASing.zip
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+      - name: Generar proyecto
+        working-directory: AZASing
+        run: xcodegen generate
+      - name: Compilar
+        working-directory: AZASing
+        run: xcodebuild -project AZASing.xcodeproj -scheme AZASing -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+      - name: Crear IPA
+        working-directory: AZASing
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/AZASing.app Payload/
+          zip -qr AZASing.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AZASing-ipa
+          path: AZASing/AZASing.ipa
 
