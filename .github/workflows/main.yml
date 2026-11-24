@@ -7,6 +7,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Descomprimir proyecto
         run: unzip -q AZASing.zip
+      - name: Corregir rama de Zsign
+        run: sed -i '' 's/branch: main/branch: master/' AZASing/project.yml
       - name: Instalar XcodeGen
         run: brew install xcodegen
       - name: Generar proyecto
@@ -25,4 +27,5 @@ jobs:
         with:
           name: AZASing-ipa
           path: AZASing/AZASing.ipa
+
 
