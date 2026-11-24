@@ -10,11 +10,15 @@ jobs:
       - name: Detectar producto de zsign-ios
         run: |
           git clone --depth 1 https://github.com/zwsn/zsign-ios /tmp/zs
-          cat /tmp/zs/Package.swift
+          grep -rn "zsign(" /tmp/zs --include=*.swift --include=*.h --include=*.hpp --include=*.m --include=*.mm | head -20
           P=$(grep -m1 -A1 '\.library' /tmp/zs/Package.swift | grep -o 'name: *"[^"]*"' | head -1 | cut -d'"' -f2)
           [ -n "$P" ] || P=ZSign
           echo "Producto detectado: $P"
           sed -i '' "s/product: ZSign/product: $P/" AZASing/project.yml
+      - name: Ajustar llamada a zsign
+        run: |
+          sed -i '' 's/p12Path, provisionPath, password)/p12Path, provisionPath, password, "", "")/' AZASing/Sources/ZsignEngine.swift
+          grep -n "zsign(" AZASing/Sources/ZsignEngine.swift
       - name: Instalar XcodeGen
         run: brew install xcodegen
       - name: Generar proyecto
@@ -23,7 +27,7 @@ jobs:
       - name: Compilar
         working-directory: AZASing
         run: |
-          xcodebuild -project AZASing.xcodeproj -scheme AZASing -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build.log 2>&1 || { echo "=== ERRORES ==="; grep "error:" build.log | sort -u; exit 1; }
+          xcodebuild -project AZASing.xcodeproj -scheme AZASing -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build.log 2>&1 || { echo "=== ERRORES ==="; grep -A3 "error:" build.log | head -40; exit 1; }
       - name: Crear IPA
         working-directory: AZASing
         run: |
@@ -34,4 +38,5 @@ jobs:
         with:
           name: AZASing-ipa
           path: AZASing/AZASing.ipa
+
 
