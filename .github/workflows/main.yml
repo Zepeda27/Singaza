@@ -2,7 +2,7 @@ name: Build AZASing
 on: [push, workflow_dispatch]
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26-large
     steps:
       - uses: actions/checkout@v4
       - name: Descomprimir proyecto
