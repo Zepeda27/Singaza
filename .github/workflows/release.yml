@@ -2,7 +2,7 @@ name: Publicar release
 
 on:
   workflow_run:
-    workflows: ["Build AZASing", "Compilar", "Build", "build", "CI"]
+    workflows: ["Build AZASing"]
     types: [completed]
 
 permissions:
@@ -24,6 +24,7 @@ jobs:
       - name: Poner el número de compilación en el IPA
         run: |
           IPA=$(find artifacts -name "*.ipa" | head -1)
+          echo "IPA: $IPA"
           mkdir work && cd work
           unzip -q "../$IPA"
           APP=$(ls -d Payload/*.app | head -1)
