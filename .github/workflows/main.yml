@@ -1,42 +1,49 @@
-name: Build AZASing
-on: [push, workflow_dispatch]
+# Publica cada compilación como una Release de GitHub para que AZASing pueda actualizarse sola.
+# Se guarda en: .github/workflows/release.yml
+name: Publicar release
+
+on:
+  workflow_run:
+    # Pon aquí el nombre exacto (campo "name:") de tu workflow de compilación.
+    workflows: ["Build AZASing", "Compilar", "Build", "build", "CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
 jobs:
-  build:
-    runs-on: macos-26
+  release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
-      - name: Descomprimir proyecto
-        run: unzip -q AZASing.zip
-      - name: Detectar producto de zsign-ios
-        run: |
-          git clone --depth 1 https://github.com/zwsn/zsign-ios /tmp/zs
-          grep -rn "zsign(" /tmp/zs --include=*.swift --include=*.h --include=*.hpp --include=*.m --include=*.mm | head -20
-          P=$(grep -m1 -A1 '\.library' /tmp/zs/Package.swift | grep -o 'name: *"[^"]*"' | head -1 | cut -d'"' -f2)
-          [ -n "$P" ] || P=ZSign
-          echo "Producto detectado: $P"
-          sed -i '' "s/product: ZSign/product: $P/" AZASing/project.yml
-      - name: Ajustar llamada a zsign
-        run: |
-          sed -i '' 's/p12Path, provisionPath, password)/p12Path, provisionPath, password, "", "")/' AZASing/Sources/ZsignEngine.swift
-          grep -n "zsign(" AZASing/Sources/ZsignEngine.swift
-      - name: Instalar XcodeGen
-        run: brew install xcodegen
-      - name: Generar proyecto
-        working-directory: AZASing
-        run: xcodegen generate
-      - name: Compilar
-        working-directory: AZASing
-        run: |
-          xcodebuild -project AZASing.xcodeproj -scheme AZASing -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build.log 2>&1 || { echo "=== ERRORES ==="; grep -A3 "error:" build.log | head -40; exit 1; }
-      - name: Crear IPA
-        working-directory: AZASing
-        run: |
-          mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/AZASing.app Payload/
-          zip -qr AZASing.ipa Payload
-      - uses: actions/upload-artifact@v4
+      - name: Descargar el IPA compilado
+        uses: actions/download-artifact@v4
         with:
-          name: AZASing-ipa
-          path: AZASing/AZASing.ipa
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+
+      - name: Poner el número de compilación en el IPA
+        run: |
+          IPA=$(find artifacts -name "*.ipa" | head -1)
+          echo "IPA: $IPA"
+          mkdir work && cd work
+          unzip -q "../$IPA"
+          APP=$(ls -d Payload/*.app | head -1)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.event.workflow_run.run_number }}" "$APP/Info.plist"
+          zip -qr ../AZASing.ipa Payload
+
+      - name: Crear la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          N=${{ github.event.workflow_run.run_number }}
+          gh release create "build-$N" AZASing.ipa \
+            --repo "${{ github.repository }}" \
+            --title "AZASing build $N" \
+            --notes "Nueva versión de AZASing (compilación $N)." \
+            --latest
+
 
 
